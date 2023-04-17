@@ -1,0 +1,96 @@
+function Reconnect(world,id)
+    if getBot().status ~= "online" then
+        sleep(1000)
+        while getBot().status ~= "online" do
+            connect()
+            sleep(10000)
+        end
+        JoinWorld(world,id)
+    end
+end
+Delay_Level = 2
+function JoinWorld(jWorld,jid)
+    repeat
+        sendPacket(3,"action|join_request\nname|"..jWorld.."\ninvitedWorld|0")
+        sleep(1000*Delay_Level)
+    until getBot().world == string.upper(jWorld)
+    repeat
+        sendPacket(3,"action|join_request\nname|"..jWorld.."|"..jid.."\ninvitedWorld|0")
+        sleep(1000*Delay_Level)
+    until getTile(math.floor(getBot().x / 32),math.floor(getBot().y / 32)).fg ~= 6
+end
+
+function AmbilSeed()
+    JoinWorld(World_Seed,id_door_seed)
+    Reconnect(World_Seed,id_door_seed)
+    for _, object in pairs(getObjects()) do
+        if object.id == seedid then
+            findPath(math.floor(object.x/32),math.floor(object.y/32))
+            sleep(3000)
+            if findItem(seedid) >= 1 then 
+                break 
+            end
+        end
+    end
+    sleep(1000)
+    JoinWorld(PosWorld,id_door)
+    Reconnect(PosWorld,id_door)
+end    
+
+function Cek_Empty()
+    Empty = 0
+    for _, tile in pairs(getTiles()) do
+        if tile.fg == 0 and getTile(tile.x,tile.y+1).fg ~= 0 and getTile(tile.x,tile.y+1).fg ~= seedid then
+            Empty = Empty + 1
+        end
+    end
+    return Empty
+end
+
+function plant()
+	::cek::
+    for _, tile in pairs(getTiles()) do
+        if tile.fg == 0 and getTile(tile.x,tile.y+1).fg ~= 0 and getTile(tile.x,tile.y+1).fg ~= seedid then
+            if findItem(seedid) == 0 then
+                repeat
+                    PosX = math.floor(getBot().x/32)
+                    PosY = math.floor(getBot().y/32)
+                    sleep(500)
+                    AmbilSeed()
+                    sleep(1000)
+                until findItem(seedid) ~= 0
+                goto cek
+            end
+            findPath(tile.x,tile.y)
+            sleep(Delay/2)
+            repeat
+                place(seedid,0,0)
+                sleep(Delay)
+            until getTile(math.floor(getBot().x/32),math.floor(getBot().y/32)).fg == seedid
+        end
+    end       
+end
+collectSet(true,3)
+
+for i, ListWorld in ipairs(World) do
+    kondisi = true
+    JoinWorld(ListWorld,id_door)
+    sleep(2000)
+    PosWorld = getBot().world
+    while kondisi do
+        ::ulang::
+        plant()
+        sleep(500)
+        if Cek_Empty() ~= 0 then
+            goto ulang
+        else
+            sleep(200)
+            kondisi = false
+        end
+    end
+    sleep(5000)
+end
+sleep(5000)
+if Remove_Bot == true then
+    removeBot(getBot().name)
+end
